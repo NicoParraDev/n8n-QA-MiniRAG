@@ -1,0 +1,221 @@
+{
+  "name": "Q&A Webhook Mini-RAG",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "qa",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -448,
+        -160
+      ],
+      "id": "92fc7355-349f-4816-94a5-a308b22c14da",
+      "name": "Webhook",
+      "webhookId": "0e610240-a3ae-437a-ba5b-965a37138bee"
+    },
+    {
+      "parameters": {
+        "url": "={{\n($json.body?.url || \"\")\n  .replace(\"https://es.wikipedia.org/wiki/\",\"https://es.wikipedia.org/api/rest_v1/page/summary/\")\n  .replace(\"http://es.wikipedia.org/wiki/\",\"https://es.wikipedia.org/api/rest_v1/page/summary/\")\n}}\n",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -288,
+        -160
+      ],
+      "id": "55a491e5-ac52-403c-a20d-f29a445fb93d",
+      "name": "Fetch URL"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Responde usando SOLO el contexto. Si no alcanza, di: \"No encontré información en el contexto.\"\n\nPregunta: {{$json[\"question\"]}}\nContexto: {{$json[\"context\"]}}",
+        "options": {
+          "systemMessage": "Eres un asistente que responde únicamente con el contexto provisto.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        112,
+        -160
+      ],
+      "id": "4df0813e-8088-485e-b272-e8667bad5b8e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        48
+      ],
+      "id": "323245e5-0667-4687-b623-6c3711945014",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "AziMi5bBSg22sJUN",
+          "name": "OpenAi account personal"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{$json.body.sessionId || $json.headers[\"x-real-ip\"] || \"qa-session\"}}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        336,
+        48
+      ],
+      "id": "172ed010-e335-4c3f-b43d-7ca6ea8cee85",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json.text || $json.result || $json.message || $json.output || \"Sin respuesta generada\"}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        432,
+        -176
+      ],
+      "id": "43dd3472-e399-47cc-ae37-0da56262c024",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8020be4e-7678-44d7-a2e1-5fa37141aaf7",
+              "name": "question",
+              "value": "={{ $json.body?.question || $json.question || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "855bfeda-fd8e-4544-9ee8-f8ad8675e892",
+              "name": "context",
+              "value": "={{ \n  $node[\"Fetch URL\"]?.json?.extract\n  || $node[\"Fetch URL\"]?.json?.extract\n  || $json.extract\n  || \"SIN_CONTEXTO\"\n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -80,
+        -160
+      ],
+      "id": "2fe930bb-3d39-4375-b1f8-f58782051c60",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Fetch URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch URL": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "90c7fa97-8b5c-420a-b160-53e523180497",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "26790b57205cca66a512ac7313ac7ec93fc88f78367487699fd0626460db75b0"
+  },
+  "id": "zxRe2m3OysLQrInB",
+  "tags": []
+}
