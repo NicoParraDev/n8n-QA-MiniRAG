@@ -13,6 +13,8 @@
 
 ## 🧩 Arquitectura General
 
+![Arquitectura del Sistema](estructura.png)
+
 ```text
 Webhook → Fetch URL → Edit Fields → AI Agent → Respond to Webhook
                                  │
@@ -59,6 +61,8 @@ curl -X POST "https://tucuentan8n.app.n8n.cloud/webhook/qa" ^
 ```
 
 ## 🧠 Cómo Funciona el Mini-RAG
+
+![Diagrama de Funcionamiento](funcionamiento.png)
 
 1. **Retrieve**: Se descarga contenido desde una URL (idealmente Wikipedia).
 2. **Augment**: El nodo Edit Fields limpia el HTML y extrae el texto relevante.
